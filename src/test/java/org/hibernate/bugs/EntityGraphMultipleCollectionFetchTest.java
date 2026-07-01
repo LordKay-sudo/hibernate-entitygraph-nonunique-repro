@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.hibernate.Hibernate;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.testing.orm.junit.DomainModel;
+import org.hibernate.testing.orm.junit.Jira;
 import org.hibernate.testing.orm.junit.ServiceRegistry;
 import org.hibernate.testing.orm.junit.SessionFactory;
 import org.hibernate.testing.orm.junit.SessionFactoryScope;
@@ -23,8 +24,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * matches one root entity. {@link TypedQuery#getSingleResult()} throws
  * {@link org.hibernate.NonUniqueResultException} in Hibernate 7.4+.
  *
+ * @see <a href="https://hibernate.atlassian.net/browse/HHH-20643">HHH-20643</a>
  * @see <a href="https://github.com/spring-projects/spring-data-jpa/issues/4284">spring-data-jpa #4284</a>
  */
+@Jira("https://hibernate.atlassian.net/browse/HHH-20643")
 @DomainModel(annotatedClasses = {
         Request.class,
         Payload.class,

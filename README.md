@@ -34,6 +34,7 @@ On H2, `getResultList()` may sometimes deduplicate roots in memory while SQL sti
 
 ## Related
 
+- [HHH-20643](https://hibernate.atlassian.net/browse/HHH-20643)
 - https://github.com/spring-projects/spring-data-jpa/issues/4284
 - https://github.com/LordKay-sudo/spring-data-jpa-4284-repro
 
