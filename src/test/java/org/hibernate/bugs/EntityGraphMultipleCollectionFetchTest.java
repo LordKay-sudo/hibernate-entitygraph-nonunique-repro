@@ -1,10 +1,8 @@
 package org.hibernate.bugs;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
-import org.hibernate.NonUniqueResultException;
+import org.hibernate.Hibernate;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.testing.orm.junit.DomainModel;
 import org.hibernate.testing.orm.junit.ServiceRegistry;
@@ -19,14 +17,13 @@ import jakarta.persistence.Subgraph;
 import jakarta.persistence.TypedQuery;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Reproducer for EntityGraph + multiple collection fetch joins causing
- * {@link NonUniqueResultException} on {@link TypedQuery#getSingleResult()}
- * even when the WHERE clause matches exactly one root entity.
+ * Reproducer for EntityGraph + multiple collection fetch joins on a query that
+ * matches one root entity. {@link TypedQuery#getSingleResult()} throws
+ * {@link org.hibernate.NonUniqueResultException} in Hibernate 7.4+.
  *
- * <p>Related: <a href="https://github.com/spring-projects/spring-data-jpa/issues/4284">spring-data-jpa #4284</a>
+ * @see <a href="https://github.com/spring-projects/spring-data-jpa/issues/4284">spring-data-jpa #4284</a>
  */
 @DomainModel(annotatedClasses = {
         Request.class,
@@ -84,27 +81,27 @@ class EntityGraphMultipleCollectionFetchTest {
     }
 
     @Test
-    void fetchGraph_getSingleResult_throwsNonUniqueResultException(SessionFactoryScope scope) {
+    void fetchGraph_getSingleResult_returnsSingleRootWithInitializedCollections(SessionFactoryScope scope) {
         scope.inEntityManager(entityManager -> {
-            TypedQuery<Request> query = graphQuery(entityManager);
-            assertThatThrownBy(query::getSingleResult)
-                    .isInstanceOf(NonUniqueResultException.class)
-                    .hasMessageContaining("Query did not return a unique result");
+            Request request = graphQuery(entityManager).getSingleResult();
+
+            assertThat(request.getId()).isEqualTo(requestId);
+            assertThat(Hibernate.isInitialized(request.getGroups())).isTrue();
+            assertThat(request.getGroups()).hasSize(3);
+            request.getGroups().forEach(group -> {
+                assertThat(Hibernate.isInitialized(group.getRules())).isTrue();
+                assertThat(Hibernate.isInitialized(group.getDecisions())).isTrue();
+                assertThat(group.getRules()).hasSize(2);
+                assertThat(group.getDecisions()).hasSize(2);
+            });
+            assertThat(Hibernate.isInitialized(request.getAffectedUsers().getUsers())).isTrue();
+            assertThat(Hibernate.isInitialized(request.getAffectedUsers().getRoles())).isTrue();
+            assertThat(Hibernate.isInitialized(request.getAffectedUsers().getGroups())).isTrue();
         });
     }
 
     @Test
-    void fetchGraph_getResultStream_returnsMultipleRootRows(SessionFactoryScope scope) {
-        scope.inEntityManager(entityManager -> {
-            List<Request> rows = new ArrayList<>();
-            graphQuery(entityManager).getResultStream().forEach(rows::add);
-            assertThat(rows.size()).isGreaterThan(1);
-            assertThat(rows).allMatch(row -> row.getId().equals(requestId));
-        });
-    }
-
-    @Test
-    void fetchGraph_withDistinctJpql_stillThrowsOnGetSingleResult(SessionFactoryScope scope) {
+    void fetchGraph_withDistinctJpql_getSingleResult_returnsSingleRoot(SessionFactoryScope scope) {
         scope.inEntityManager(entityManager -> {
             EntityGraph<Request> graph = createFetchGraph(entityManager);
             TypedQuery<Request> query = entityManager.createQuery(
@@ -114,8 +111,9 @@ class EntityGraphMultipleCollectionFetchTest {
             query.setParameter("id", requestId);
             query.setHint("jakarta.persistence.fetchgraph", graph);
 
-            assertThatThrownBy(query::getSingleResult)
-                    .isInstanceOf(NonUniqueResultException.class);
+            Request request = query.getSingleResult();
+            assertThat(request.getId()).isEqualTo(requestId);
+            assertThat(request.getGroups()).hasSize(3);
         });
     }
 

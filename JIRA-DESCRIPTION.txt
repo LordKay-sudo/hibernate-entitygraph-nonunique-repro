@@ -1,0 +1,34 @@
+h2. Environment
+
+* Hibernate ORM 7.4.1.Final
+* Jakarta Persistence 3.x
+* H2 in-memory (also reproduced on PostgreSQL; see Spring reproducer)
+
+h2. Summary
+
+When applying an {{EntityGraph}} with {{jakarta.persistence.fetchgraph}} that fetch-joins multiple collections on a query filtered to a single root entity ({{where r.id = :id}}), {{TypedQuery.getSingleResult()}} throws {{NonUniqueResultException}} because the JDBC result set contains multiple rows from collection fetch join cartesian products, even though every row maps to the same root entity instance.
+
+h2. Steps to reproduce
+
+# Clone https://github.com/LordKay-sudo/hibernate-entitygraph-nonunique-repro
+# Run {{mvn test}}
+# {{EntityGraphMultipleCollectionFetchTest}} fails with {{NonUniqueResultException}}
+
+h2. Expected behavior
+
+{{getSingleResult()}} returns the single matching {{Request}} with collections initialized (behavior before Hibernate 7.4 / Spring Boot 4.1).
+
+h2. Actual behavior
+
+{{NonUniqueResultException: Query did not return a unique result: N results were returned}} where N matches cartesian product row count (e.g. 3 groups → 3 JDBC rows).
+
+h2. Additional notes
+
+* {{SELECT DISTINCT}} in JPQL does not fix this when fetch joins come from the entity graph.
+* {{getResultStream().findFirst()}} works as a workaround.
+* [spring-data-jpa #4284|https://github.com/spring-projects/spring-data-jpa/issues/4284] was closed as external; identical behavior confirmed via raw {{EntityManager}}.
+
+h2. Reproducers
+
+* https://github.com/LordKay-sudo/hibernate-entitygraph-nonunique-repro
+* https://github.com/LordKay-sudo/spring-data-jpa-4284-repro
