@@ -56,7 +56,7 @@ When applying an `EntityGraph` with `jakarta.persistence.fetchgraph` that fetch-
 
 **Steps to reproduce**
 
-1. Clone your published copy of this reproducer (push this folder to GitHub first), or attach a zip.
+1. Clone https://github.com/LordKay-sudo/hibernate-entitygraph-nonunique-repro (or attach a zip).
 2. Run `mvn test`.
 3. `EntityGraphMultipleCollectionFetchTest` fails on `fetchGraph_getSingleResult_throwsNonUniqueResultException` — that test documents current behavior; invert assertions if you consider this a regression.
 
